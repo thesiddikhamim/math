@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Central Limit Theorem</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&family=Crimson+Pro:wght@300;400;600&display=swap');
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --border: #1e1e2e;
+  --accent: #e8c97a;
+  --accent2: #7ac4e8;
+  --accent3: #e87ab0;
+  --text: #e8e4d9;
+  --muted: #7a7a8a;
+  --glow: rgba(232,201,122,0.15);
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+  font-family:'Crimson Pro',Georgia,serif;
+  background:var(--bg); color:var(--text);
+  font-size:1.15rem; line-height:1.75; overflow-x:hidden;
+}
+
+body::before{
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:1000; opacity:0.4;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+/* ═══════════════════════════════════════
+   MATH RENDERING — CSS-based, no library
+   Uses flexbox fractions + pseudo-element radicals
+   Font: STIX Two Math / Cambria Math / serif fallback
+   ═══════════════════════════════════════ */
+
+/* Base math container */
+.math {
+  display: inline-flex;
+  align-items: center;
+  font-family: "STIX Two Math","Cambria Math","Latin Modern Math","Times New Roman",serif;
+  font-style: italic;
+  line-height: 1;
+  gap: 0.12em;
+}
+
+/* Fraction: num on top, denom on bottom, separated by border */
+.frac {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  vertical-align: middle;
+  gap: 0;
+  margin: 0 0.1em;
+}
+.frac .num {
+  padding: 0 0.15em 0.12em;
+  border-bottom: 1.5px solid currentColor;
+  text-align: center;
+  white-space: nowrap;
+}
+.frac .den {
+  padding: 0.12em 0.15em 0;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Superscript */
+.sup {
+  font-size: 0.65em;
+  vertical-align: super;
+  font-style: italic;
+  line-height: 0;
+  margin-left: 0.02em;
+}
+
+/* Overline (X-bar) */
+.obar {
+  display: inline-block;
+  text-decoration: overline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0;
+}
+
+/* Square root — uses a styled span with left border + top border */
+.sqrt-wrap {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  margin: 0 0.05em;
+}
+.sqrt-sym {
+  font-style: normal;
+  font-size: 1.3em;
+  line-height: 1;
+  margin-right: 0.02em;
+  vertical-align: middle;
+  /* Use the actual unicode radical symbol */
+  font-family: "STIX Two Math","Cambria Math","Latin Modern Math","Times New Roman",serif;
+}
+.sqrt-inner {
+  display: inline-block;
+  border-top: 1.5px solid currentColor;
+  padding: 0.05em 0.18em 0 0.1em;
+  vertical-align: middle;
+}
+
+/* Display-mode equation block */
+.eq-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.2em;
+  font-size: 1.5rem; /* base size for display equations */
+  padding: 1.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.eq-display:last-child { border-bottom: none; }
+
+/* Operator spacing */
+.op { margin: 0 0.25em; font-style: normal; }
+.rel { margin: 0 0.3em; font-style: normal; } /* =, ~, → */
+
+/* "as n→∞" text */
+.text-math {
+  font-family: "STIX Two Math","Times New Roman",serif;
+  font-style: normal;
+  font-size: 0.7em;
+  color: var(--muted);
+  margin-left: 0.4em;
+  align-self: center;
+}
+
+/* Calligraphic N */
+.cal-N {
+  font-family: "Palatino Linotype","Palatino","Book Antiqua",Palatino,serif;
+  font-style: italic;
+}
+
+/* Big parentheses */
+.big-paren {
+  font-size: 1.8em;
+  line-height: 0.9;
+  vertical-align: middle;
+  font-style: normal;
+  font-family: "STIX Two Math","Cambria Math","Times New Roman",serif;
+}
+
+/* Label above each equation */
+.eq-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  text-transform: uppercase;
+  text-align: center;
+  padding-top: 1.4rem;
+  padding-bottom: 0;
+}
+
+.eq-row {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border);
+}
+.eq-row:last-child { border-bottom: none; }
+
+/* ═══ PAGE LAYOUT ═══ */
+.hero{
+  min-height:100vh; display:flex; flex-direction:column;
+  justify-content:center; align-items:center; text-align:center;
+  padding:4rem 2rem; position:relative; overflow:hidden;
+}
+.hero-bg{
+  position:absolute; inset:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 60%,rgba(232,201,122,0.07) 0%,transparent 70%),
+    radial-gradient(ellipse 40% 30% at 20% 20%,rgba(122,196,232,0.05) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 30% at 80% 80%,rgba(232,122,176,0.05) 0%,transparent 60%);
+}
+.hero-bell{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:900px;opacity:0.12;}
+.overline-tag{font-family:'DM Mono',monospace;font-size:0.7rem;letter-spacing:0.3em;color:var(--accent);text-transform:uppercase;margin-bottom:1.5rem;opacity:0;animation:fadeUp .8s .2s forwards;}
+h1{font-family:'Playfair Display',serif;font-size:clamp(3rem,8vw,7rem);font-weight:700;line-height:1.05;letter-spacing:-0.02em;color:var(--text);opacity:0;animation:fadeUp .8s .4s forwards;}
+h1 em{font-style:italic;color:var(--accent);}
+.hero-sub{max-width:560px;color:var(--muted);font-size:1.1rem;margin-top:1.5rem;opacity:0;animation:fadeUp .8s .6s forwards;}
+.scroll-hint{position:absolute;bottom:2.5rem;font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0.2em;color:var(--muted);text-transform:uppercase;opacity:0;animation:fadeUp .8s 1s forwards,pulse 2s 1.8s infinite;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+.container{max-width:820px;margin:0 auto;padding:0 2rem;}
+section{padding:6rem 0;border-top:1px solid var(--border);}
+.section-number{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.25em;color:var(--accent);text-transform:uppercase;margin-bottom:1rem;}
+h2{font-family:'Playfair Display',serif;font-size:clamp(2rem,4vw,3.2rem);font-weight:700;line-height:1.1;margin-bottom:2rem;}
+h3{font-family:'Playfair Display',serif;font-size:1.5rem;margin:2.5rem 0 .8rem;color:var(--accent);}
+p{margin-bottom:1.2rem;color:#c8c4b9;}
+.highlight-box{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);padding:1.5rem 2rem;margin:2rem 0;border-radius:0 8px 8px 0;}
+.highlight-box p{margin:0;color:var(--text);font-size:1.05rem;}
+
+.formula{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:2rem 0;overflow:hidden;position:relative;}
+.formula::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(122,196,232,0.06),transparent 70%);pointer-events:none;}
+
+.demo-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem;margin:2.5rem 0;position:relative;overflow:hidden;}
+.demo-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));}
+.demo-title{font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.2em;color:var(--accent);text-transform:uppercase;margin-bottom:1.2rem;}
+.controls{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;align-items:center;}
+.ctrl-group{display:flex;flex-direction:column;gap:.4rem;}
+.ctrl-group label{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;}
+select,input[type=range]{background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:.4rem .8rem;font-family:'DM Mono',monospace;font-size:.85rem;cursor:pointer;}
+input[type=range]{accent-color:var(--accent);width:140px;padding:0;}
+.btn{background:var(--accent);color:#0a0a0f;border:none;border-radius:8px;padding:.6rem 1.4rem;font-family:'DM Mono',monospace;font-size:.8rem;letter-spacing:.05em;cursor:pointer;font-weight:500;transition:all .2s;}
+.btn:hover{background:#f0d88a;transform:translateY(-1px);}
+canvas{width:100%;border-radius:8px;background:var(--bg);display:block;}
+.stats-row{display:flex;gap:2rem;margin-top:1rem;flex-wrap:wrap;}
+.stat{display:flex;flex-direction:column;gap:.2rem;}
+.stat-label{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);}
+.stat-value{font-family:'DM Mono',monospace;font-size:1rem;color:var(--accent2);}
+.conditions-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.2rem;margin:2rem 0;}
+.cond-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;transition:border-color .3s;}
+.cond-card:hover{border-color:var(--accent);}
+.cond-icon{font-size:1.8rem;margin-bottom:.8rem;}
+.cond-card h4{font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:.5rem;color:var(--text);}
+.cond-card p{font-size:.9rem;color:var(--muted);margin:0;}
+.example-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin:2rem 0;}
+@media(max-width:600px){.example-grid{grid-template-columns:1fr;}}
+.example-card{border:1px solid var(--border);border-radius:12px;padding:1.5rem;position:relative;overflow:hidden;}
+.example-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 0% 0%,var(--glow),transparent 70%);opacity:0;transition:opacity .3s;}
+.example-card:hover::before{opacity:1;}
+.example-card .tag{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:.6rem;}
+.example-card h4{font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:.5rem;}
+.example-card p{font-size:.9rem;color:var(--muted);margin:0;}
+footer{border-top:1px solid var(--border);padding:3rem 0;text-align:center;}
+footer p{font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;}
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease;}
+.reveal.visible{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <svg class="hero-bell" viewBox="0 0 900 300" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#e8c97a" stop-opacity="1"/>
+        <stop offset="100%" stop-color="#e8c97a" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path id="bellPath" fill="url(#bg1)"/>
+  </svg>
+  <div style="position:relative;z-index:1">
+    <div class="overline-tag">Probability Theory</div>
+    <h1>The <em>Central</em><br>Limit Theorem</h1>
+    <p class="hero-sub">Why the universe tends toward the bell curve — and why this changes everything in statistics, science, and beyond.</p>
+  </div>
+  <div class="scroll-hint">↓ &nbsp; Scroll to explore</div>
+</div>
+
+<!-- SECTION 1 -->
+<section>
+  <div class="container reveal">
+    <div class="section-number">01 — The Big Idea</div>
+    <h2>Order emerging from chaos</h2>
+    <p>Take any population — people's heights, the roll of a die, a skewed income distribution, even the number of typos per page. Now do something remarkable: draw many random samples from it, and compute the <em>mean</em> of each sample. Plot those means.</p>
+    <p>No matter how weird or asymmetric the original distribution is, those sample means will arrange themselves into a beautiful, symmetric bell shape — a <strong>normal distribution</strong>. This is the Central Limit Theorem (CLT), one of the most profound results in all of mathematics.</p>
+    <div class="highlight-box">
+      <p><strong>The Central Limit Theorem states:</strong> Given a population with mean μ and finite variance σ², the distribution of sample means from samples of size <em>n</em> approaches a normal distribution as <em>n</em> increases, regardless of the shape of the original population.</p>
+    </div>
+    <p>This isn't just a mathematical curiosity. It's the reason polls work, the reason quality control works, the reason we can make confident claims from limited data. It's the bedrock of modern statistics.</p>
+  </div>
+</section>
+
+<!-- SECTION 2: MATH -->
+<section>
+  <div class="container reveal">
+    <div class="section-number">02 — The Mathematics</div>
+    <h2>What the theorem actually says</h2>
+    <p>Suppose you have a population with mean <strong>μ</strong> and standard deviation <strong>σ</strong>. You draw a random sample of size <strong>n</strong>. The sample mean is <strong>X̄</strong>. Here is what the CLT guarantees:</p>
+
+    <div class="formula">
+
+      <!-- ══════════════════════════════
+           EQ 1:  X̄ ~ 𝒩(μ, σ²/n)  as n→∞
+           ══════════════════════════════ -->
+      <div class="eq-row">
+        <div class="eq-label">Sample Mean Distribution</div>
+        <div class="eq-display" style="color:var(--accent2);">
+          <!-- X̄ -->
+          <span class="math" style="font-size:1.5rem;">
+            <span class="obar">X</span>
+          </span>
+          <!-- ∼ -->
+          <span class="rel" style="font-style:normal;font-family:serif;font-size:1.4rem;">∼</span>
+          <!-- 𝒩 -->
+          <span class="cal-N" style="font-size:1.7rem;">𝒩</span>
+          <!-- big ( -->
+          <span class="big-paren">(</span>
+          <!-- μ -->
+          <span class="math" style="font-size:1.5rem;">μ</span>
+          <!-- , -->
+          <span style="font-size:1.4rem;font-style:normal;">,</span>
+          <!-- σ²/n as a proper fraction -->
+          <span class="math">
+            <span class="frac" style="font-size:1.15rem;">
+              <span class="num">σ<span class="sup">2</span></span>
+              <span class="den">n</span>
+            </span>
+          </span>
+          <!-- big ) -->
+          <span class="big-paren">)</span>
+          <!-- as n→∞ -->
+          <span class="text-math" style="font-size:1.05rem;">as &thinsp; <em>n</em> → ∞</span>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           EQ 2:  SE = σ / √n
+           ══════════════════════════════ -->
+      <div class="eq-row">
+        <div class="eq-label">Standard Error — spread of sample means</div>
+        <div class="eq-display" style="color:var(--accent3);">
+          <!-- SE -->
+          <span style="font-family:'STIX Two Math','Times New Roman',serif;font-style:normal;font-size:1.5rem;letter-spacing:0.02em;">SE</span>
+          <!-- = -->
+          <span class="rel" style="font-size:1.5rem;">=</span>
+          <!-- σ/√n as fraction -->
+          <span class="math">
+            <span class="frac" style="font-size:1.25rem;">
+              <span class="num">σ</span>
+              <span class="den">
+                <!-- √n using unicode radical + overlined n -->
+                <span class="sqrt-wrap">
+                  <span class="sqrt-sym">√</span><span class="sqrt-inner">n</span>
+                </span>
+              </span>
+            </span>
+          </span>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════
+           EQ 3:  Z = (X̄ − μ)/(σ/√n) ~ 𝒩(0,1)
+           ══════════════════════════════ -->
+      <div class="eq-row">
+        <div class="eq-label">Standardized Z-score</div>
+        <div class="eq-display" style="color:var(--accent);">
+          <!-- Z -->
+          <span class="math" style="font-size:1.5rem;">Z</span>
+          <!-- = -->
+          <span class="rel" style="font-size:1.5rem;">=</span>
+          <!-- big fraction: (X̄ − μ) / (σ/√n) -->
+          <span class="math">
+            <span class="frac" style="font-size:1.2rem;">
+              <span class="num" style="display:flex;align-items:center;gap:0.15em;">
+                <span class="obar">X</span>
+                <span style="margin:0 0.2em;font-style:normal;">−</span>
+                <span>μ</span>
+              </span>
+              <span class="den" style="display:flex;align-items:center;gap:0.12em;">
+                <span>σ</span>
+                <span style="font-style:normal;margin:0 0.05em;">/</span>
+                <span class="sqrt-wrap">
+                  <span class="sqrt-sym">√</span><span class="sqrt-inner">n</span>
+                </span>
+              </span>
+            </span>
+          </span>
+          <!-- ∼ -->
+          <span class="rel" style="font-style:normal;font-family:serif;font-size:1.4rem;">∼</span>
+          <!-- 𝒩 -->
+          <span class="cal-N" style="font-size:1.7rem;">𝒩</span>
+          <!-- (0, 1) -->
+          <span class="big-paren">(</span>
+          <span class="math" style="font-size:1.35rem;font-style:normal;letter-spacing:0.02em;">0, 1</span>
+          <span class="big-paren">)</span>
+        </div>
+      </div>
+
+    </div><!-- /formula -->
+
+    <h3>Breaking it down</h3>
+    <p><strong>μ (mu):</strong> The true population mean. The centre of the bell curve of sample means will always land right here, regardless of the population's shape.</p>
+    <p><strong>σ/√n — Standard Error:</strong> As sample size n grows, the spread of sample means shrinks proportionally. Double your sample size and the spread shrinks by √2 ≈ 1.41. Bigger samples, sharper estimates.</p>
+    <p><strong>𝒩(0, 1) — the Standard Normal:</strong> After the Z-transform every dataset speaks the same language — mean 0, standard deviation 1. Every p-value, every confidence interval, every hypothesis test is built on this.</p>
+    <div class="highlight-box">
+      <p>Rule of thumb: the CLT kicks in reliably at <strong>n ≥ 30</strong>. For heavily skewed populations you may need more. For near-symmetric ones, even n = 10 often suffices.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 3: DEMO -->
+<section>
+  <div class="container reveal">
+    <div class="section-number">03 — See It Happen</div>
+    <h2>Watch the theorem in action</h2>
+    <p>Choose a population shape, set sample size n, and draw thousands of samples. Watch the distribution of sample means converge to a bell curve regardless of where you started.</p>
+    <div class="demo-card">
+      <div class="demo-title">⬡ Interactive Simulation</div>
+      <div class="controls">
+        <div class="ctrl-group">
+          <label>Population Shape</label>
+          <select id="distType">
+            <option value="uniform">Uniform (flat)</option>
+            <option value="exponential">Exponential (skewed right)</option>
+            <option value="bimodal">Bimodal (two peaks)</option>
+            <option value="u_shaped">U-shaped (extremes)</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <label>Sample Size n = <span id="nVal">5</span></label>
+          <input type="range" id="sampleSize" min="1" max="50" value="5">
+        </div>
+        <div class="ctrl-group">
+          <label>Samples drawn</label>
+          <select id="numSamples">
+            <option value="500">500</option>
+            <option value="2000" selected>2,000</option>
+            <option value="5000">5,000</option>
+          </select>
+        </div>
+        <button class="btn" onclick="runSimulation()">▶ Run</button>
+      </div>
+      <canvas id="popCanvas" height="160"></canvas>
+      <div style="text-align:center;font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;color:var(--muted);margin:0.5rem 0 1rem;text-transform:uppercase;">Population Distribution</div>
+      <canvas id="cltCanvas" height="220"></canvas>
+      <div style="text-align:center;font-family:'DM Mono',monospace;font-size:0.6rem;letter-spacing:0.15em;color:var(--muted);margin:0.5rem 0 0.3rem;text-transform:uppercase;">Distribution of Sample Means — converging to normal</div>
+      <div class="stats-row">
+        <div class="stat"><span class="stat-label">Observed Mean</span><span class="stat-value" id="statMean">—</span></div>
+        <div class="stat"><span class="stat-label">Std Error</span><span class="stat-value" id="statSE">—</span></div>
+        <div class="stat"><span class="stat-label">Samples</span><span class="stat-value" id="statN">—</span></div>
+        <div class="stat"><span class="stat-label">Normality</span><span class="stat-value" id="statNorm">—</span></div>
+      </div>
+    </div>
+    <p>Try this: set distribution to <em>Exponential</em> (very skewed), n=1 — you see raw skew. Slowly increase n to 30 and watch the bell curve emerge. That transformation <em>is</em> the CLT.</p>
+  </div>
+</section>
+
+<!-- SECTION 4 -->
+<section>
+  <div class="container reveal">
+    <div class="section-number">04 — When It Works</div>
+    <h2>Three conditions to check</h2>
+    <p>The CLT is powerful, but not unconditional. Before relying on it, three assumptions should hold:</p>
+    <div class="conditions-grid">
+      <div class="cond-card">
+        <div class="cond-icon">🎲</div>
+        <h4>Independence</h4>
+        <p>Each observation must be independent — knowing one value shouldn't inform another. Random sampling achieves this.</p>
+      </div>
+      <div class="cond-card">
+        <div class="cond-icon">📏</div>
+        <h4>Identical Distribution</h4>
+        <p>Each observation should come from the same population (i.i.d. — independently and identically distributed).</p>
+      </div>
+      <div class="cond-card">
+        <div class="cond-icon">📐</div>
+        <h4>Finite Variance</h4>
+        <p>The population must have finite mean and variance. The Cauchy distribution famously violates this — and the CLT breaks down.</p>
+      </div>
+    </div>
+    <p>When these hold and n is large enough, the CLT guarantees normality. When they don't, alternatives like the <em>bootstrap</em> or <em>generalized limit theorems</em> take over.</p>
+  </div>
+</section>
+
+<!-- SECTION 5 -->
+<section>
+  <div class="container reveal">
+    <div class="section-number">05 — Why It Matters</div>
+    <h2>The theorem that runs the world</h2>
+    <p>The CLT quietly powers decisions affecting billions of people every day:</p>
+    <div class="example-grid">
+      <div class="example-card">
+        <div class="tag">Economics</div>
+        <h4>Polling & Surveys</h4>
+        <p>A poll of 1,000 can represent 300 million. The CLT guarantees the sample mean is normally distributed — giving us margins of error and confidence intervals.</p>
+      </div>
+      <div class="example-card">
+        <div class="tag">Manufacturing</div>
+        <h4>Quality Control</h4>
+        <p>Factories sample batches to monitor production. Control charts based on sample means reliably detect when a process goes out of specification.</p>
+      </div>
+      <div class="example-card">
+        <div class="tag">Finance</div>
+        <h4>Risk & Portfolios</h4>
+        <p>Portfolio returns are sums of many individual returns. The CLT enables risk models, VaR calculations, and options pricing.</p>
+      </div>
+      <div class="example-card">
+        <div class="tag">Medicine</div>
+        <h4>Clinical Trials</h4>
+        <p>Drug trials compare group means. The CLT lets researchers compute p-values and determine significance even when individual outcomes are irregular.</p>
+      </div>
+      <div class="example-card">
+        <div class="tag">Physics</div>
+        <h4>Measurement Error</h4>
+        <p>Repeated measurements produce normally distributed errors — a direct consequence of the CLT applied to many small, independent error sources.</p>
+      </div>
+      <div class="example-card">
+        <div class="tag">Machine Learning</div>
+        <h4>Gradient Descent</h4>
+        <p>Mini-batch gradients average many individual loss gradients. The CLT ensures these averages are approximately normal, informing learning rate choices.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 6 -->
+<section>
+  <div class="container reveal">
+    <div class="section-number">06 — The Deep Intuition</div>
+    <h2>Why does this happen at all?</h2>
+    <p>When you average n values, extreme outcomes in either direction become increasingly unlikely — they require many values to simultaneously be extreme in the same direction. The more you average, the more extremes cancel, and mass concentrates in the middle.</p>
+    <p>Mathematically, the proof uses <em>characteristic functions</em> — Fourier transforms of probability distributions. Expanding via Taylor series shows that higher-order moments (skewness, kurtosis) decay as 1/n, 1/n²… Only mean and variance survive in the limit, uniquely defining the Gaussian.</p>
+    <div class="highlight-box">
+      <p>The bell curve is the <em>fixed point</em> of the averaging operation. Start anywhere. Average enough. You always arrive at the same destination. This is why the normal distribution appears everywhere nature involves sums of many independent contributions.</p>
+    </div>
+    <h3>The connection to entropy</h3>
+    <p>Among all distributions with a given mean and variance, the normal distribution <em>maximizes entropy</em> — it is the most "uncertain" distribution possible under those constraints. The CLT can be understood as averaging pushing every distribution toward maximum entropy.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>Central Limit Theorem &nbsp;·&nbsp; A visual explainer &nbsp;·&nbsp; Built with mathematics & curiosity</p>
+  </div>
+</footer>
+
+<script>
+// Hero bell curve
+(function(){
+  const path=document.getElementById('bellPath');
+  const W=900,H=300,g=x=>Math.exp(-.5*x*x)/Math.sqrt(2*Math.PI);
+  const pts=[];
+  for(let i=0;i<=300;i++){const x=-4+8*(i/300);pts.push(`${i===0?'M':'L'}${(x+4)/8*W},${H-g(x)*H*2.5}`);}
+  pts.push(`L${W},${H} L0,${H} Z`);
+  path.setAttribute('d',pts.join(' '));
+})();
+
+// Scroll reveal
+document.querySelectorAll('.reveal').forEach(el=>{
+  new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});
+  },{threshold:0.1}).observe(el);
+});
+
+// Slider
+document.getElementById('sampleSize').addEventListener('input',function(){
+  document.getElementById('nVal').textContent=this.value;
+});
+
+// RNG
+const rU=()=>Math.random();
+const rExp=()=>-Math.log(1-Math.random());
+const rG=(mu=0,s=1)=>{const u1=Math.random(),u2=Math.random();return mu+s*Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2);};
+const rBi=()=>Math.random()<.5?rG(-2,.6):rG(2,.6);
+const rU2=()=>Math.random()<.5?rG(-3,.7):rG(3,.7);
+function getSample(d){
+  if(d==='uniform')return rU();
+  if(d==='exponential')return rExp();
+  if(d==='bimodal')return rBi();
+  if(d==='u_shaped')return rU2();
+}
+
+function drawHist(canvas,data,color,overlay){
+  const dpr=window.devicePixelRatio||1;
+  const W=canvas.offsetWidth,H=+canvas.getAttribute('height');
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+  if(!data||!data.length)return;
+  const mn=Math.min(...data),mx=Math.max(...data),rng=mx-mn||1;
+  const bins=50,cnts=new Array(bins).fill(0);
+  data.forEach(v=>cnts[Math.min(bins-1,~~((v-mn)/rng*bins))]++);
+  const maxC=Math.max(...cnts);
+  const p={l:40,r:20,t:20,b:30};
+  const pw=W-p.l-p.r,ph=H-p.t-p.b;
+  ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=p.t+ph*(1-i/4);ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(p.l+pw,y);ctx.stroke();}
+  const bw=pw/bins;
+  cnts.forEach((c,i)=>{const x=p.l+i*bw,h=(c/maxC)*ph,y=p.t+ph-h;ctx.fillStyle=color+'bb';ctx.fillRect(x+1,y,bw-2,h);});
+  if(overlay){
+    const{mean:m,std:s}=overlay;
+    ctx.beginPath();ctx.strokeStyle='#e8c97a';ctx.lineWidth=2.5;
+    for(let px=0;px<=pw;px++){
+      const v=mn+(px/pw)*rng;
+      const den=Math.exp(-.5*((v-m)/s)**2)/(s*Math.sqrt(2*Math.PI));
+      const norm=den*rng/bins*data.length;
+      const py=p.t+ph-(norm/maxC)*ph;
+      px===0?ctx.moveTo(p.l+px,py):ctx.lineTo(p.l+px,py);
+    }
+    ctx.stroke();
+  }
+  ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(p.l,p.t);ctx.lineTo(p.l,p.t+ph);ctx.lineTo(p.l+pw,p.t+ph);ctx.stroke();
+}
+
+const mean=a=>a.reduce((s,v)=>s+v,0)/a.length;
+const std=a=>{const m=mean(a);return Math.sqrt(a.reduce((s,v)=>s+(v-m)**2,0)/a.length);};
+
+function runSimulation(){
+  const dist=document.getElementById('distType').value;
+  const n=+document.getElementById('sampleSize').value;
+  const ns=+document.getElementById('numSamples').value;
+  drawHist(document.getElementById('popCanvas'),Array.from({length:3000},()=>getSample(dist)),'#7ac4e8',null);
+  const means=Array.from({length:ns},()=>mean(Array.from({length:n},()=>getSample(dist))));
+  const m=mean(means),s=std(means);
+  drawHist(document.getElementById('cltCanvas'),means,'#e87ab0',{mean:m,std:s});
+  document.getElementById('statMean').textContent=m.toFixed(4);
+  document.getElementById('statSE').textContent=s.toFixed(4);
+  document.getElementById('statN').textContent=ns.toLocaleString();
+  const sk=means.reduce((a,v)=>a+((v-m)/s)**3,0)/ns;
+  document.getElementById('statNorm').textContent=n>=30?'✓ Normal':Math.abs(sk)<.5?'✓ Normal':Math.abs(sk)<1?'~ Nearly':'✗ Skewed';
+}
+
+window.addEventListener('load',()=>setTimeout(runSimulation,300));
+</script>
+</body>
+</html>
